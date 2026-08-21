@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<h1>DownVas</h1>
+<p>Descarga cursos de Canvas LMS</p>
+
+{% if error %}
+<p style="color: red;">{{ error }}</p>
+{% endif %}
+
+<h2>Configuracion de Canvas</h2>
+<form method="post" action="{% url 'load_course' %}">
+    {% csrf_token %}
+
+    <div>
+        <label for="id_canvas_url">{{ config_form.canvas_url.label }}</label>
+        {{ config_form.canvas_url }}
+    </div>
+
+    <div>
+        <label for="id_api_token">{{ config_form.api_token.label }}</label>
+        {{ config_form.api_token }}
+    </div>
+
+    <div>
+        <label for="id_locale">{{ config_form.locale.label }}</label>
+        {{ config_form.locale }}
+    </div>
+
+    <h2>Curso</h2>
+    <div>
+        <label for="id_course_input">{{ course_form.course_input.label }}</label>
+        {{ course_form.course_input }}
+    </div>
+
+    <button type="submit">Cargar Curso</button>
+</form>
+{% endblock %}

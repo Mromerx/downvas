@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<h1>{{ course.name }}</h1>
+<p>{{ total_files }} archivos encontrados</p>
+
+<form method="post" action="{% url 'download_files' %}" id="download-form">
+    {% csrf_token %}
+
+    <div>
+        <button type="button" onclick="selectAll()">Seleccionar todo</button>
+        <button type="button" onclick="deselectAll()">Deseleccionar todo</button>
+        <button type="submit">Descargar seleccionados</button>
+    </div>
+
+    <br>
+
+    {% for section in sections %}
+    <details open>
+        <summary>
+            <input type="checkbox"
+                   class="section-toggle"
+                   data-section="section-{{ forloop.counter }}"
+                   onchange="toggleSection(this)">
+            <strong>{{ section.name }}</strong>
+            <small>({{ section.files|length }} archivos - {{ section.type }})</small>
+        </summary>
+
+        <ul>
+            {% for file in section.files %}
+            <li>
+                <input type="checkbox"
+                       name="file_ids"
+                       value="{{ file.id }}"
+                       class="section-{{ forloop.parentloop.counter }}">
+                {{ file.display_name }}
+                {% if file.size %}<small>({{ file.size }})</small>{% endif %}
+                {% if file.locked %}<small>[Bloqueado]</small>{% endif %}
+                {% if file.hidden %}<small>[Oculto]</small>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% empty %}
+    <p>No se encontraron archivos en el curso.</p>
+    {% endfor %}
+</form>
+
+<script>
+function toggleSection(checkbox) {
+    var sectionClass = checkbox.getAttribute('data-section');
+    var files = document.querySelectorAll('.' + sectionClass);
+    for (var i = 0; i < files.length; i++) {
+        files[i].checked = checkbox.checked;
+    }
+}
+
+function selectAll() {
+    var checkboxes = document.querySelectorAll('input[name="file_ids"]');
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = true;
+    }
+    var sectionToggles = document.querySelectorAll('.section-toggle');
+    for (var i = 0; i < sectionToggles.length; i++) {
+        sectionToggles[i].checked = true;
+    }
+}
+
+function deselectAll() {
+    var checkboxes = document.querySelectorAll('input[name="file_ids"]');
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = false;
+    }
+    var sectionToggles = document.querySelectorAll('.section-toggle');
+    for (var i = 0; i < sectionToggles.length; i++) {
+        sectionToggles[i].checked = false;
+    }
+}
+</script>
+{% endblock %}
