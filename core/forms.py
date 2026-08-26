@@ -8,6 +8,7 @@ class CanvasConfigForm(forms.Form):
     )
     api_token = forms.CharField(
         label="API Token",
+        required=False,
         widget=forms.PasswordInput(attrs={"placeholder": "Your Canvas API token"}),
     )
     locale = forms.ChoiceField(

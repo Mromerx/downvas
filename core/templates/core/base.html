@@ -1,21 +1,51 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DownVas</title>
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
 </head>
 <body>
-    <aside>
-        <nav>
-            <ul>
-                <li><a href="{% url 'index' %}">Inicio</a></li>
-                <li><a href="{% url 'settings' %}">Configuración</a></li>
-            </ul>
-        </nav>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-brand">DownVas</span>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+        </div>
+        <ul class="sidebar-nav">
+            <li><a href="{% url 'index' %}"><span>Home</span></a></li>
+            <li><a href="{% url 'settings' %}"><span>Settings</span></a></li>
+        </ul>
     </aside>
-    <main>
+    <main class="main-content" id="main-content">
         {% block content %}{% endblock %}
     </main>
+    <script>
+    (function () {
+        var sidebar = document.getElementById('sidebar');
+        var main = document.getElementById('main-content');
+        var toggle = document.getElementById('sidebar-toggle');
+        var collapsed = localStorage.getItem('sidebar-collapsed') === '1';
+
+        function apply() {
+            if (collapsed) {
+                sidebar.classList.add('collapsed');
+                main.classList.add('expanded');
+            } else {
+                sidebar.classList.remove('collapsed');
+                main.classList.remove('expanded');
+            }
+        }
+
+        apply();
+
+        toggle.addEventListener('click', function () {
+            collapsed = !collapsed;
+            localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+            apply();
+        });
+    })();
+    </script>
 </body>
 </html>

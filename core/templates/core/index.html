@@ -1,51 +1,26 @@
 {% extends "core/base.html" %}
 
 {% block content %}
-<h1>DownVas</h1>
-<p>Download courses from Canvas LMS</p>
+<h1 class="page-title">DownVas</h1>
+<p class="subtitle page-subtitle">Download courses from Canvas LMS</p>
 
 {% if messages %}
-{% for msg in messages %}
-<p style="color: {% if msg.tags == 'error' %}red{% else %}green{% endif %};">{{ msg }}</p>
-{% endfor %}
+<ul class="messages">
+    {% for msg in messages %}
+    <li class="{{ msg.tags }}">{{ msg }}</li>
+    {% endfor %}
+</ul>
 {% endif %}
 
-<h2>Canvas Settings</h2>
-<form method="post" action="{% url 'save_config' %}">
-    {% csrf_token %}
+<div class="card">
+    <form method="post" action="{% url 'load_course' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_course_input">{{ course_form.course_input.label }}</label>
+            {{ course_form.course_input }}
+        </div>
+        <button type="submit" class="btn btn-primary">Load Course</button>
+    </form>
+</div>
 
-    <div>
-        <label for="id_canvas_url">{{ config_form.canvas_url.label }}</label>
-        {{ config_form.canvas_url }}
-    </div>
-
-    <div>
-        <label for="id_api_token">{{ config_form.api_token.label }}</label>
-        {{ config_form.api_token }}
-    </div>
-
-    <div>
-        <label for="id_locale">{{ config_form.locale.label }}</label>
-        {{ config_form.locale }}
-    </div>
-
-    <button type="submit">Save</button>
-</form>
-
-<h2>Course</h2>
-<form method="post" action="{% url 'load_course' %}">
-    {% csrf_token %}
-
-    <div>
-        <label for="id_course_input">{{ course_form.course_input.label }}</label>
-        {{ course_form.course_input }}
-    </div>
-
-    <button type="submit">Load Course</button>
-</form>
-
-{% if request.session.canvas_url %}
-<hr>
-<a href="{% url 'clear_session' %}">Clear session (remove saved data)</a>
-{% endif %}
 {% endblock %}

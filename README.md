@@ -1,11 +1,23 @@
 # DownVas Web
 
-Download courses from Canvas LMS through a web interface.
+Download files from Canvas LMS courses through a web interface.
+
+## Features
+
+- Fetches the complete course tree from Canvas: modules, pages, folders, assignments, discussions, and syllabus
+- Extracts file links embedded in HTML content (pages, assignments, discussions)
+- Browse and select files via a tree view with checkboxes (individual, section, or select all)
+- Download individual files or multiple files as a `.zip` archive
+- Parallel downloads (5 workers) for fast fetching
+- Rate-limit awareness with automatic retries
+- Multi-language support (English / Spanish)
+- Responsive design with collapsible sidebar
+- No database required -- all data lives in the session
 
 ## Prerequisites
 
-- Python 3.10 or higher
-- A Canvas LMS instance
+- Python 3.10+
+- A Canvas LMS instance with API access enabled
 - A Canvas API token
 
 ## Installation
@@ -36,17 +48,25 @@ pip install -r requirements.txt
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-5. Copy the example environment file and configure it:
+5. Create your environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-6. Edit `.env` and fill in your values:
+6. Edit `.env` and set your values:
 
 ```env
 SECRET_KEY=<paste the generated key here>
+DEBUG=false
+ALLOWED_HOSTS=localhost,127.0.0.1
 ```
+
+| Variable | Description | Default |
+|---|---|---|
+| `SECRET_KEY` | Django secret key (required) | -- |
+| `DEBUG` | Enable debug mode | `false` |
+| `ALLOWED_HOSTS` | Comma-separated allowed hostnames | `localhost,127.0.0.1` |
 
 ## Running
 
@@ -59,17 +79,41 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ## Usage
 
-1. Enter your Canvas URL and API token
-2. Enter a course ID or full course URL
+1. Go to **Settings** and enter your Canvas URL and API token
+2. Navigate to the home page and enter a course ID or full Canvas course URL
 3. The course tree will load with all files organized by modules, pages, and folders
 4. Select files using checkboxes (individual or by section)
-5. Click "Download selected" to download directly to your browser
+5. Click **Download selected** to download directly to your browser
 
 ## How to get a Canvas API token
 
 1. Log in to your Canvas instance
 2. Go to Account > Settings
-3. Click "New Access Token"
+3. Click **New Access Token**
 4. Copy the generated token
 
+## Project Structure
 
+```
+downvas/
+  manage.py                  # Django entry point
+  requirements.txt           # Dependencies (django, requests, python-dotenv)
+  .env                       # Runtime configuration
+  downvas/                   # Django project settings and URL routing
+  core/                      # Web UI: views, forms, templates, static files
+  canvas_client/             # Canvas LMS API client and file downloader
+    api_client.py            # REST API client with pagination and rate-limit handling
+    downloader.py            # Parallel file downloader with zip support
+    html_parser.py           # Extracts file links from HTML content
+    exceptions.py            # Custom exception hierarchy
+    models.py                # Dataclasses: CanvasCourse, CanvasFolder, CanvasFile, CourseTree
+  sessions/                  # File-based session storage (gitignored)
+```
+
+## Tech Stack
+
+- **Backend**: Python, Django 5.0+
+- **HTTP**: requests 2.31+
+- **Frontend**: Django templates, vanilla CSS/JS
+- **Session storage**: File-based (no database)
+- **Environment**: python-dotenv

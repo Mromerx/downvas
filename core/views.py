@@ -47,7 +47,9 @@ def settings_view(request):
             return redirect("settings")
 
         request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
-        request.session["api_token"] = config_form.cleaned_data["api_token"].strip()
+        api_token = config_form.cleaned_data["api_token"].strip()
+        if api_token:
+            request.session["api_token"] = api_token
         request.session["locale"] = config_form.cleaned_data["locale"]
 
         messages.success(request, "Settings saved.")
@@ -74,7 +76,9 @@ def save_config(request):
         return redirect("index")
 
     request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
-    request.session["api_token"] = config_form.cleaned_data["api_token"].strip()
+    api_token = config_form.cleaned_data["api_token"].strip()
+    if api_token:
+        request.session["api_token"] = api_token
     request.session["locale"] = config_form.cleaned_data["locale"]
 
     messages.success(request, "Settings saved.")

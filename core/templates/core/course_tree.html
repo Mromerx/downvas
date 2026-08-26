@@ -2,49 +2,49 @@
 
 {% block content %}
 <h1>{{ course.name }}</h1>
-<p>{{ total_files }} files found</p>
+<p class="subtitle">{{ total_files }} files found</p>
 
-<form method="post" action="{% url 'download_files' %}" id="download-form">
-    {% csrf_token %}
+<div class="card">
+    <form method="post" action="{% url 'download_files' %}" id="download-form">
+        {% csrf_token %}
 
-    <div>
-        <button type="button" onclick="selectAll()">Select all</button>
-        <button type="button" onclick="deselectAll()">Deselect all</button>
-        <button type="submit">Download selected</button>
-    </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="selectAll()">Select all</button>
+            <button type="button" class="btn btn-secondary" onclick="deselectAll()">Deselect all</button>
+            <button type="submit" class="btn btn-primary">Download selected</button>
+        </div>
 
-    <br>
-
-    {% for section in sections %}
-    <details open>
-        <summary>
-            <input type="checkbox"
-                   class="section-toggle"
-                   data-section="section-{{ forloop.counter }}"
-                   onchange="toggleSection(this)">
-            <strong>{{ section.name }}</strong>
-            <small>({{ section.files|length }} files - {{ section.type }})</small>
-        </summary>
-
-        <ul>
-            {% for file in section.files %}
-            <li>
+        {% for section in sections %}
+        <details open>
+            <summary>
                 <input type="checkbox"
-                       name="file_ids"
-                       value="{{ file.id }}"
-                       class="section-{{ forloop.parentloop.counter }}">
-                {{ file.display_name }}
-                {% if file.size %}<small>({{ file.size }})</small>{% endif %}
-                {% if file.locked %}<small>[Locked]</small>{% endif %}
-                {% if file.hidden %}<small>[Hidden]</small>{% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    </details>
-    {% empty %}
-    <p>No files found in this course.</p>
-    {% endfor %}
-</form>
+                       class="section-toggle"
+                       data-section="section-{{ forloop.counter }}"
+                       onchange="toggleSection(this)">
+                <strong>{{ section.name }}</strong>
+                <small>({{ section.files|length }} files - {{ section.type }})</small>
+            </summary>
+
+            <ul>
+                {% for file in section.files %}
+                <li>
+                    <input type="checkbox"
+                           name="file_ids"
+                           value="{{ file.id }}"
+                           class="section-{{ forloop.parentloop.counter }}">
+                    {{ file.display_name }}
+                    {% if file.size %}<small>({{ file.size }})</small>{% endif %}
+                    {% if file.locked %}<small>[Locked]</small>{% endif %}
+                    {% if file.hidden %}<small>[Hidden]</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </details>
+        {% empty %}
+        <p>No files found in this course.</p>
+        {% endfor %}
+    </form>
+</div>
 
 <script>
 function toggleSection(checkbox) {

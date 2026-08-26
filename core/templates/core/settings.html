@@ -1,32 +1,38 @@
 {% extends "core/base.html" %}
 
 {% block content %}
-<h1>Canvas Settings</h1>
+<h1>Settings</h1>
+<p class="subtitle">Configure your Canvas LMS connection</p>
 
 {% if messages %}
-{% for msg in messages %}
-<p style="color: {% if msg.tags == 'error' %}red{% else %}green{% endif %};">{{ msg }}</p>
-{% endfor %}
+<ul class="messages">
+    {% for msg in messages %}
+    <li class="{{ msg.tags }}">{{ msg }}</li>
+    {% endfor %}
+</ul>
 {% endif %}
 
-<form method="post" action="{% url 'settings' %}">
-    {% csrf_token %}
+<div class="card">
+    <form method="post" action="{% url 'settings' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_canvas_url">{{ config_form.canvas_url.label }}</label>
+            {{ config_form.canvas_url }}
+        </div>
+        <div class="form-group">
+            <label for="id_api_token">{{ config_form.api_token.label }}</label>
+            {{ config_form.api_token }}
+        </div>
+        <div class="form-group">
+            <label for="id_locale">{{ config_form.locale.label }}</label>
+            {{ config_form.locale }}
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>
 
-    <div>
-        <label for="id_canvas_url">{{ config_form.canvas_url.label }}</label>
-        {{ config_form.canvas_url }}
-    </div>
-
-    <div>
-        <label for="id_api_token">{{ config_form.api_token.label }}</label>
-        {{ config_form.api_token }}
-    </div>
-
-    <div>
-        <label for="id_locale">{{ config_form.locale.label }}</label>
-        {{ config_form.locale }}
-    </div>
-
-    <button type="submit">Save</button>
-</form>
+{% if request.session.canvas_url %}
+<hr>
+<a class="link" href="{% url 'clear_session' %}">Clear session (remove saved data)</a>
+{% endif %}
 {% endblock %}
