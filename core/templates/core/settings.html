@@ -1,8 +1,7 @@
 {% extends "core/base.html" %}
 
 {% block content %}
-<h1>DownVas</h1>
-<p>Download courses from Canvas LMS</p>
+<h1>Canvas Settings</h1>
 
 {% if messages %}
 {% for msg in messages %}
@@ -10,8 +9,7 @@
 {% endfor %}
 {% endif %}
 
-<h2>Canvas Settings</h2>
-<form method="post" action="{% url 'save_config' %}">
+<form method="post" action="{% url 'settings' %}">
     {% csrf_token %}
 
     <div>
@@ -31,21 +29,4 @@
 
     <button type="submit">Save</button>
 </form>
-
-<h2>Course</h2>
-<form method="post" action="{% url 'load_course' %}">
-    {% csrf_token %}
-
-    <div>
-        <label for="id_course_input">{{ course_form.course_input.label }}</label>
-        {{ course_form.course_input }}
-    </div>
-
-    <button type="submit">Load Course</button>
-</form>
-
-{% if request.session.canvas_url %}
-<hr>
-<a href="{% url 'clear_session' %}">Clear session (remove saved data)</a>
-{% endif %}
 {% endblock %}

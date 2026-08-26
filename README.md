@@ -46,8 +46,6 @@ cp .env.example .env
 
 ```env
 SECRET_KEY=<paste the generated key here>
-CANVAS_URL=https://your-canvas-instance.com
-CANVAS_TOKEN=your-api-token-here
 ```
 
 ## Running

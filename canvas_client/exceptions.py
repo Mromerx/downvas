@@ -20,9 +20,5 @@ class CourseNotFoundError(CanvasAPIError):
     pass
 
 
-class ConfigurationError(DownVasError):
-    pass
-
-
 class CanvasConnectionError(DownVasError):
     pass

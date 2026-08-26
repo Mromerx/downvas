@@ -2,15 +2,15 @@
 
 {% block content %}
 <h1>{{ course.name }}</h1>
-<p>{{ total_files }} archivos encontrados</p>
+<p>{{ total_files }} files found</p>
 
 <form method="post" action="{% url 'download_files' %}" id="download-form">
     {% csrf_token %}
 
     <div>
-        <button type="button" onclick="selectAll()">Seleccionar todo</button>
-        <button type="button" onclick="deselectAll()">Deseleccionar todo</button>
-        <button type="submit">Descargar seleccionados</button>
+        <button type="button" onclick="selectAll()">Select all</button>
+        <button type="button" onclick="deselectAll()">Deselect all</button>
+        <button type="submit">Download selected</button>
     </div>
 
     <br>
@@ -23,7 +23,7 @@
                    data-section="section-{{ forloop.counter }}"
                    onchange="toggleSection(this)">
             <strong>{{ section.name }}</strong>
-            <small>({{ section.files|length }} archivos - {{ section.type }})</small>
+            <small>({{ section.files|length }} files - {{ section.type }})</small>
         </summary>
 
         <ul>
@@ -35,14 +35,14 @@
                        class="section-{{ forloop.parentloop.counter }}">
                 {{ file.display_name }}
                 {% if file.size %}<small>({{ file.size }})</small>{% endif %}
-                {% if file.locked %}<small>[Bloqueado]</small>{% endif %}
-                {% if file.hidden %}<small>[Oculto]</small>{% endif %}
+                {% if file.locked %}<small>[Locked]</small>{% endif %}
+                {% if file.hidden %}<small>[Hidden]</small>{% endif %}
             </li>
             {% endfor %}
         </ul>
     </details>
     {% empty %}
-    <p>No se encontraron archivos en el curso.</p>
+    <p>No files found in this course.</p>
     {% endfor %}
 </form>
 

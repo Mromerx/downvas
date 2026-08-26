@@ -1,8 +1,8 @@
 import shutil
-import tempfile
-from pathlib import Path
 from collections import defaultdict
+from wsgiref.util import FileWrapper
 
+from django.contrib import messages
 from django.http import StreamingHttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 
@@ -17,77 +17,111 @@ from canvas_client.models import CourseTree
 from .forms import CanvasConfigForm, CourseInputForm
 
 
-def index(request):
-    config_form = CanvasConfigForm(initial={
+def _config_form_from_session(request, initial=None):
+    data = {
         "canvas_url": request.session.get("canvas_url", ""),
-        "locale": request.session.get("locale", "es"),
-    })
+        "api_token": request.session.get("api_token", ""),
+        "locale": request.session.get("locale", "en"),
+    }
+    if initial:
+        data.update(initial)
+    form = CanvasConfigForm(initial=data)
+    if request.session.get("api_token"):
+        form.fields["api_token"].widget.attrs["placeholder"] = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)"
+    return form
+
+
+def index(request):
     course_form = CourseInputForm()
 
     return render(request, "core/index.html", {
-        "config_form": config_form,
         "course_form": course_form,
     })
+
+
+def settings_view(request):
+    if request.method == "POST":
+        config_form = CanvasConfigForm(request.POST)
+        if not config_form.is_valid():
+            messages.error(request, "Please fill in all settings fields.")
+            return redirect("settings")
+
+        request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
+        request.session["api_token"] = config_form.cleaned_data["api_token"].strip()
+        request.session["locale"] = config_form.cleaned_data["locale"]
+
+        messages.success(request, "Settings saved.")
+        return redirect("settings")
+
+    config_form = _config_form_from_session(request)
+    return render(request, "core/settings.html", {
+        "config_form": config_form,
+    })
+
+
+def clear_session(request):
+    request.session.flush()
+    return redirect("index")
+
+
+def save_config(request):
+    if request.method != "POST":
+        return redirect("index")
+
+    config_form = CanvasConfigForm(request.POST)
+    if not config_form.is_valid():
+        messages.error(request, "Please fill in all settings fields.")
+        return redirect("index")
+
+    request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
+    request.session["api_token"] = config_form.cleaned_data["api_token"].strip()
+    request.session["locale"] = config_form.cleaned_data["locale"]
+
+    messages.success(request, "Settings saved.")
+    return redirect("index")
 
 
 def load_course(request):
     if request.method != "POST":
         return redirect("index")
 
-    config_form = CanvasConfigForm(request.POST)
     course_form = CourseInputForm(request.POST)
 
-    if not config_form.is_valid() or not course_form.is_valid():
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": "Completa todos los campos.",
-        })
+    if not course_form.is_valid():
+        messages.error(request, "Enter a course ID.")
+        return redirect("index")
 
-    canvas_url = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
-    api_token = config_form.cleaned_data["api_token"].strip()
-    locale = config_form.cleaned_data["locale"]
+    canvas_url = request.session.get("canvas_url")
+    api_token = request.session.get("api_token")
+    locale = request.session.get("locale", "en")
     course_input = course_form.cleaned_data["course_input"].strip()
+
+    if not canvas_url or not api_token:
+        messages.error(request, "Save your Canvas settings first.")
+        return redirect("index")
 
     course_id = extract_course_id(course_input)
     if not course_id:
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": "No se pudo identificar el ID del curso. Ingresa un ID numerico o una URL valida.",
-        })
+        messages.error(request, "Could not identify the course ID. Enter a numeric ID or a valid URL.")
+        return redirect("index")
 
-    request.session["canvas_url"] = canvas_url
-    request.session["api_token"] = api_token
     request.session["locale"] = locale
 
     try:
         client = CanvasAPIClient(canvas_url, api_token)
         tree = client.fetch_course_tree(course_id)
     except CanvasAuthError:
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": "Token de acceso invalido o expirado.",
-        })
+        messages.error(request, "Invalid or expired access token.")
+        return redirect("index")
     except CourseNotFoundError:
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": f"Curso con ID {course_id} no encontrado.",
-        })
+        messages.error(request, "Course not found. Check the ID or URL.")
+        return redirect("index")
     except CanvasConnectionError:
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": "No se pudo conectar a Canvas. Verifica la URL.",
-        })
-    except CanvasAPIError as e:
-        return render(request, "core/index.html", {
-            "config_form": config_form,
-            "course_form": course_form,
-            "error": f"Error de la API de Canvas: {e}",
-        })
+        messages.error(request, "Could not connect to Canvas. Check the URL.")
+        return redirect("index")
+    except CanvasAPIError:
+        messages.error(request, "Error communicating with Canvas. Try again.")
+        return redirect("index")
 
     tree_data = _serialize_tree(tree)
     request.session["course_tree"] = tree_data
@@ -114,7 +148,7 @@ def course_tree(request):
 
 def download_files(request):
     if request.method != "POST":
-        return HttpResponseBadRequest("Solo se permite POST")
+        return HttpResponseBadRequest("POST required")
 
     tree_data = request.session.get("course_tree")
     canvas_url = request.session.get("canvas_url")
@@ -150,34 +184,38 @@ def download_files(request):
     if not jobs:
         return redirect("course_tree")
 
+    temp_dir = None
     try:
         results, temp_dir = download_files_to_temp(canvas_url, api_token, jobs)
-    except Exception as e:
-        return HttpResponseBadRequest(f"Error descargando archivos: {e}")
+    except Exception:
+        return HttpResponseBadRequest("Error downloading files. Try again.")
 
     if not results:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        return HttpResponseBadRequest("No se pudo descargar ningun archivo.")
+        return HttpResponseBadRequest("Could not download any files.")
 
     try:
         if len(results) == 1:
             file_path, file_name = results[0]
+            file_iter = FileWrapper(open(file_path, "rb"))
             response = StreamingHttpResponse(
-                open(file_path, "rb"),
+                file_iter,
                 content_type="application/octet-stream",
             )
             response["Content-Disposition"] = f'attachment; filename="{file_name}"'
         else:
-            zip_path = create_zip([fp for fp, _ in results], "cursos.zip")
+            zip_path = create_zip([fp for fp, _ in results], "courses.zip")
+            file_iter = FileWrapper(open(zip_path, "rb"))
             response = StreamingHttpResponse(
-                open(zip_path, "rb"),
+                file_iter,
                 content_type="application/zip",
             )
-            response["Content-Disposition"] = 'attachment; filename="cursos.zip"'
-    except Exception as e:
+            response["Content-Disposition"] = 'attachment; filename="courses.zip"'
+    except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        return HttpResponseBadRequest(f"Error preparando archivo: {e}")
+        return HttpResponseBadRequest("Error preparing download.")
 
+    response._downvas_temp_dir = temp_dir
     return response
 
 
@@ -234,7 +272,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
         for mname, fs in mdict.items():
             fs.sort(key=lambda x: x.display_name.lower())
             sections.append({
-                "name": mname or "Sin modulo",
+                "name": mname or "No module",
                 "type": "module",
                 "files": [_file_dict(f) for f in fs],
             })
@@ -248,7 +286,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
         for pname, fs in pdict.items():
             fs.sort(key=lambda x: x.display_name.lower())
             sections.append({
-                "name": pname or "Sin pagina",
+                "name": pname or "No page",
                 "type": "page",
                 "files": [_file_dict(f) for f in fs],
             })
@@ -259,7 +297,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
         fdict = defaultdict(list)
         for f in folder_files:
             folder = tree.folders.get(f.folder_id)
-            fdict[folder.name if folder else "Sin carpeta"].append(f)
+            fdict[folder.name if folder else "No folder"].append(f)
         for fname, fs in fdict.items():
             fs.sort(key=lambda x: x.display_name.lower())
             sections.append({
@@ -273,7 +311,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
     if flat:
         flat.sort(key=lambda x: x.display_name.lower())
         sections.append({
-            "name": "Otros archivos",
+            "name": "Other files",
             "type": "other",
             "files": [_file_dict(f) for f in flat],
         })

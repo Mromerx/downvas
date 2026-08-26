@@ -60,7 +60,3 @@ def extract_file_links_from_html(html: str, course_id: int) -> List[Tuple[int, O
     ids_in(html, None)
 
     return results
-
-
-def extract_file_ids_from_html(html: str, course_id: int) -> list[int]:
-    return [fid for fid, _ in extract_file_links_from_html(html, course_id)]

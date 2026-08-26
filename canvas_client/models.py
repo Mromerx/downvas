@@ -1,8 +1,6 @@
-import re
-from typing import List, Optional, Tuple
-from dataclasses import dataclass, field
+from typing import Optional
+from dataclasses import dataclass
 from collections import defaultdict
-from pathlib import Path
 
 
 @dataclass
@@ -71,60 +69,3 @@ class CourseTree:
         for file in self.files.values():
             if file.folder_id is not None:
                 self.folder_files_map[file.folder_id].append(file)
-
-    def get_all_files(self) -> list[CanvasFile]:
-        return list(self.files.values())
-
-    def get_files_by_extension(self, ext: str) -> list[CanvasFile]:
-        ext = ext.lower()
-        if not ext.startswith("."):
-            ext = f".{ext}"
-        return [f for f in self.files.values() if f.extension == ext]
-
-    def get_file_download_path(self, file_id: int, base_dir: Path) -> Path:
-        file = self.files.get(file_id)
-        if not file:
-            return base_dir / "unknown"
-
-        def clean_name(name: str) -> str:
-            return re.sub(r'[\\/*?:"<>|]', "", name).strip()
-
-        course_folder = clean_name(self.course.name)
-        file_name = clean_name(file.display_name)
-
-        if file.page_name and file.page_id is not None:
-            d = clean_name(file.page_name)
-            return base_dir / course_folder / f"{d} ({file.page_id})" / file_name
-
-        if file.module_name and file.module_id:
-            d = clean_name(file.module_name)
-            return base_dir / course_folder / f"{d} ({file.module_id})" / file_name
-
-        if file.module_name:
-            return base_dir / course_folder / clean_name(file.module_name) / file_name
-
-        if file.folder_id and self.folders:
-            path_parts = []
-            current_folder_id = file.folder_id
-            while current_folder_id:
-                folder = self.folders.get(current_folder_id)
-                if not folder:
-                    break
-                d = clean_name(folder.name)
-                path_parts.insert(0, f"{d} ({folder.id})")
-                current_folder_id = folder.parent_folder_id
-            if path_parts:
-                return base_dir / course_folder / Path(*path_parts) / file_name
-
-        return base_dir / course_folder / file_name
-
-    def find_file_by_name(self, name: str) -> list[CanvasFile]:
-        query = name.lower()
-        return [f for f in self.files.values() if query in f.display_name.lower()]
-
-    def find_file_by_path(self, path_str: str) -> Optional[CanvasFile]:
-        query = path_str.lower().strip()
-        for f in self.files.values():
-            if f.display_name.lower() == query:
-                return f
-        return None

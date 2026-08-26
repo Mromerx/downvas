@@ -3,24 +3,24 @@ from django import forms
 
 class CanvasConfigForm(forms.Form):
     canvas_url = forms.URLField(
-        label="URL de Canvas",
-        widget=forms.URLInput(attrs={"placeholder": "https://canvas.ejemplo.cl"}),
+        label="Canvas URL",
+        widget=forms.URLInput(attrs={"placeholder": "https://canvas.example.com"}),
     )
     api_token = forms.CharField(
-        label="Token de API",
-        widget=forms.TextInput(attrs={"placeholder": "Tu token de Canvas"}),
+        label="API Token",
+        widget=forms.PasswordInput(attrs={"placeholder": "Your Canvas API token"}),
     )
     locale = forms.ChoiceField(
-        label="Idioma",
-        choices=[("es", "Espanol"), ("en", "English")],
-        initial="es",
+        label="Language",
+        choices=[("en", "English"), ("es", "Spanish")],
+        initial="en",
     )
 
 
 class CourseInputForm(forms.Form):
     course_input = forms.CharField(
-        label="Curso",
+        label="Course",
         widget=forms.TextInput(attrs={
-            "placeholder": "ID del curso o URL completa"
+            "placeholder": "Course ID or full URL"
         }),
     )
