@@ -2,6 +2,9 @@
 
 Descarga archivos de cursos de Canvas LMS a traves de una interfaz web.
 
+<img width="1005" height="372" alt="image" src="https://github.com/user-attachments/assets/e8c82e7f-e300-4800-b849-34ae54ccffb2" />
+
+
 ## Funcionalidades
 
 - Obtiene el arbol completo del curso desde Canvas: modulos, paginas, carpetas, tareas, discusiones y silabo
