@@ -68,10 +68,40 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 | `DEBUG` | Enable debug mode | `false` |
 | `ALLOWED_HOSTS` | Comma-separated allowed hostnames | `localhost,127.0.0.1` |
 
+### Windows
+
+The steps are the same as above, with these differences:
+
+2. Create and activate a virtual environment (PowerShell):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+5. Create your environment file:
+
+```powershell
+copy .env.example .env
+```
+
 ## Running
 
 ```bash
 source .venv/bin/activate
+python manage.py runserver
+```
+
+On Windows (PowerShell):
+
+```powershell
+.venv\Scripts\activate
 python manage.py runserver
 ```
 

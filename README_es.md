@@ -68,10 +68,40 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 | `DEBUG` | Habilitar modo de depuracion | `false` |
 | `ALLOWED_HOSTS` | Hostnames permitidos separados por coma | `localhost,127.0.0.1` |
 
+### Windows
+
+Los pasos son los mismos que arriba, con estas diferencias:
+
+2. Crea y activa un entorno virtual (PowerShell):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+3. Instala las dependencias:
+
+```powershell
+pip install -r requirements.txt
+```
+
+5. Crea tu archivo de configuracion:
+
+```powershell
+copy .env.example .env
+```
+
 ## Ejecutar
 
 ```bash
 source .venv/bin/activate
+python manage.py runserver
+```
+
+En Windows (PowerShell):
+
+```powershell
+.venv\Scripts\activate
 python manage.py runserver
 ```
 
