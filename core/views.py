@@ -19,19 +19,20 @@ from canvas_client.downloader import DownloadJob, download_files_to_temp, create
 from canvas_client.models import CourseTree
 
 from .download_jobs import register_job, take_job
+from .env_config import get_api_token, set_api_token
 from .forms import CanvasConfigForm, CourseInputForm
 
 
 def _config_form_from_session(request, initial=None):
     data = {
         "canvas_url": request.session.get("canvas_url", ""),
-        "api_token": request.session.get("api_token", ""),
+        "api_token": "",
         "locale": request.session.get("locale", "en"),
     }
     if initial:
         data.update(initial)
     form = CanvasConfigForm(initial=data)
-    if request.session.get("api_token"):
+    if get_api_token():
         form.fields["api_token"].widget.attrs["placeholder"] = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)"
     return form
 
@@ -54,7 +55,7 @@ def settings_view(request):
         request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
         api_token = config_form.cleaned_data["api_token"].strip()
         if api_token:
-            request.session["api_token"] = api_token
+            set_api_token(api_token)
         request.session["locale"] = config_form.cleaned_data["locale"]
 
         messages.success(request, "Settings saved.")
@@ -83,7 +84,7 @@ def save_config(request):
     request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
     api_token = config_form.cleaned_data["api_token"].strip()
     if api_token:
-        request.session["api_token"] = api_token
+        set_api_token(api_token)
     request.session["locale"] = config_form.cleaned_data["locale"]
 
     messages.success(request, "Settings saved.")
@@ -101,7 +102,7 @@ def load_course(request):
         return redirect("index")
 
     canvas_url = request.session.get("canvas_url")
-    api_token = request.session.get("api_token")
+    api_token = get_api_token()
     locale = request.session.get("locale", "en")
     course_input = course_form.cleaned_data["course_input"].strip()
 
@@ -162,7 +163,7 @@ def _collect_download_jobs(request):
     returns (None, None, []).
     """
     canvas_url = request.session.get("canvas_url")
-    api_token = request.session.get("api_token")
+    api_token = get_api_token()
     tree_data = request.session.get("course_tree")
     course_id = request.session.get("course_id")
 
