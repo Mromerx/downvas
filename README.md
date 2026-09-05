@@ -2,6 +2,9 @@
 
 Download files from Canvas LMS courses through a web interface.
 
+<img width="1003" height="366" alt="image" src="https://github.com/user-attachments/assets/8ae2d83d-7c72-4ce4-b34a-f96a18fd3913" />
+
+
 ## Features
 
 - Fetches the complete course tree from Canvas: modules, pages, folders, assignments, discussions, and syllabus
