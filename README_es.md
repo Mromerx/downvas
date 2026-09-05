@@ -75,15 +75,13 @@ copy .env.example .env
 
 ```env
 SECRET_KEY=<pega la clave generada aqui>
-DEBUG=false
-ALLOWED_HOSTS=localhost,127.0.0.1
+CANVAS_API_TOKEN=<tu token de API de Canvas>
 ```
 
 | Variable | Descripcion | Valor por defecto |
 |---|---|---|
 | `SECRET_KEY` | Clave secreta de Django (requerida) | -- |
-| `DEBUG` | Habilitar modo de depuracion | `false` |
-| `ALLOWED_HOSTS` | Hostnames permitidos separados por coma | `localhost,127.0.0.1` |
+| `CANVAS_API_TOKEN` | Token de API de Canvas (tambien se puede configurar luego en Configuracion) | `(vacío)` |
 
 ## Ejecutar
 
@@ -101,9 +99,7 @@ Windows (PowerShell):
 python manage.py runserver
 ```
 
-Abre [http://127.0.0.1:8000](http://127.0.0.1:8000) en tu navegador.
-
-> **Nota:** Para ingresar a la aplicacion, abre `http://localhost:8000`.
+Abre [http://localhost:8000](http://localhost:8000) en tu navegador.
 
 ## Uso
 
