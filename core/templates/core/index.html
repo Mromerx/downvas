@@ -13,7 +13,7 @@
 {% endif %}
 
 <div class="card">
-    <form method="post" action="{% url 'load_course' %}">
+    <form method="post" action="{% url 'load_course' %}" id="course-form">
         {% csrf_token %}
         <div class="form-group">
             <label for="id_course_input">{{ course_form.course_input.label }}</label>
@@ -22,5 +22,28 @@
         <button type="submit" class="btn btn-primary">Load Course</button>
     </form>
 </div>
+
+<div class="course-loading" id="course-loading" hidden>
+    <div class="course-loading-card">
+        <div class="spinner" role="status"></div>
+        <div class="course-loading-text">Loading course…</div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('course-form');
+    var overlay = document.getElementById('course-loading');
+    if (!form || !overlay) return;
+
+    form.addEventListener('submit', function (e) {
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        overlay.hidden = false;
+        e.preventDefault();
+        form.submit();
+    });
+})();
+</script>
 
 {% endblock %}

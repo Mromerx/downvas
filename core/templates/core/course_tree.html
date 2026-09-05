@@ -150,11 +150,9 @@
                 detail.textContent = 'File ' + (evt.index + 1) + ' of ' + evt.total + ' — ' + evt.file;
                 break;
             case 'done':
-                title.textContent = 'Download ready, saving file…';
-                setBar(100);
-                detail.textContent = evt.filename || '';
-                active = false;
+                cancelBtn.style.display = 'none';
                 window.location.href = fetchUrl + '?token=' + encodeURIComponent(evt.token);
+                finish();
                 break;
             case 'error':
                 finish();
@@ -222,6 +220,7 @@
         title.textContent = 'Preparing download…';
         setIndeterminate();
         detail.textContent = 'Starting…';
+        cancelBtn.style.display = '';
         overlay.hidden = false;
         startDownload();
     });
