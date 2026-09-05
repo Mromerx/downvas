@@ -34,9 +34,18 @@ cd downvas
 
 2. Create and activate a virtual environment:
 
+macOS / Linux:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+```
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -53,8 +62,16 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 5. Create your environment file:
 
+macOS / Linux:
+
 ```bash
 cp .env.example .env
+```
+
+Windows (PowerShell):
+
+```powershell
+copy .env.example .env
 ```
 
 6. Edit `.env` and set your values:
@@ -71,37 +88,16 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 | `DEBUG` | Enable debug mode | `false` |
 | `ALLOWED_HOSTS` | Comma-separated allowed hostnames | `localhost,127.0.0.1` |
 
-### Windows
-
-The steps are the same as above, with these differences:
-
-2. Create and activate a virtual environment (PowerShell):
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-3. Install dependencies:
-
-```powershell
-pip install -r requirements.txt
-```
-
-5. Create your environment file:
-
-```powershell
-copy .env.example .env
-```
-
 ## Running
+
+macOS / Linux:
 
 ```bash
 source .venv/bin/activate
 python manage.py runserver
 ```
 
-On Windows (PowerShell):
+Windows (PowerShell):
 
 ```powershell
 .venv\Scripts\activate
