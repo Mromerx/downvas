@@ -9,4 +9,6 @@ urlpatterns = [
     path("course/load", views.load_course, name="load_course"),
     path("course", views.course_tree, name="course_tree"),
     path("course/download", views.download_files, name="download_files"),
+    path("course/download/progress", views.download_progress, name="download_progress"),
+    path("course/download/fetch", views.download_fetch, name="download_fetch"),
 ]

@@ -1,9 +1,13 @@
+import json
+import queue
 import shutil
+import threading
 from collections import defaultdict
-from wsgiref.util import FileWrapper
 
 from django.contrib import messages
-from django.http import StreamingHttpResponse, HttpResponseBadRequest
+from django.http import (
+    StreamingHttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+)
 from django.shortcuts import render, redirect
 
 from canvas_client.api_client import CanvasAPIClient
@@ -14,6 +18,7 @@ from canvas_client.utils import extract_course_id, human_readable_size
 from canvas_client.downloader import DownloadJob, download_files_to_temp, create_zip
 from canvas_client.models import CourseTree
 
+from .download_jobs import register_job, take_job
 from .forms import CanvasConfigForm, CourseInputForm
 
 
@@ -150,26 +155,24 @@ def course_tree(request):
     })
 
 
-def download_files(request):
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
+def _collect_download_jobs(request):
+    """Build DownloadJob list from the session tree and POSTed file_ids.
 
-    tree_data = request.session.get("course_tree")
+    Returns (canvas_url, api_token, jobs). If the session is incomplete,
+    returns (None, None, []).
+    """
     canvas_url = request.session.get("canvas_url")
     api_token = request.session.get("api_token")
+    tree_data = request.session.get("course_tree")
     course_id = request.session.get("course_id")
 
-    if not tree_data or not canvas_url or not api_token:
-        return redirect("index")
+    if not canvas_url or not api_token or not tree_data:
+        return None, None, []
 
     tree = _deserialize_tree(tree_data)
 
-    file_ids = request.POST.getlist("file_ids")
-    if not file_ids:
-        return redirect("course_tree")
-
     jobs = []
-    for fid_str in file_ids:
+    for fid_str in request.POST.getlist("file_ids"):
         try:
             fid = int(fid_str)
         except ValueError:
@@ -184,7 +187,137 @@ def download_files(request):
             file_id=file.id,
             course_id=course_id,
         ))
+    return canvas_url, api_token, jobs
 
+
+_SENTINEL = object()
+
+
+def _attachment_header(filename: str) -> str:
+    safe = filename.replace("\r", "").replace("\n", "").replace('"', "'").strip()
+    if not safe:
+        safe = "download"
+    return f'attachment; filename="{safe}"'
+
+
+def _stream_file_with_cleanup(path, temp_dir):
+    try:
+        with open(path, "rb") as f:
+            chunk = f.read(8192)
+            while chunk:
+                yield chunk
+                chunk = f.read(8192)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _stream_progress(canvas_url, api_token, jobs):
+    events = queue.Queue(maxsize=256)
+    stop = threading.Event()
+
+    def emit(event):
+        if stop.is_set():
+            return
+        try:
+            events.put_nowait(event)
+        except queue.Full:
+            pass
+
+    def run():
+        temp_dir = None
+        try:
+            results, temp_dir = download_files_to_temp(canvas_url, api_token, jobs, emit=emit)
+
+            if not results:
+                emit({"type": "error", "message": "No se pudo descargar ningún archivo. Revisa tu token y vuelve a intentar."})
+                return
+
+            if len(results) == 1:
+                file_path, file_name = results[0]
+                token = register_job(file_path, file_name, temp_dir, mode="single")
+                emit({"type": "done", "token": token, "mode": "single", "filename": file_name})
+            else:
+                emit({"type": "phase", "phase": "zip", "total_files": len(results)})
+
+                def on_zip(index, total, name):
+                    emit({"type": "zip", "index": index, "total": total, "file": name})
+
+                zip_path = create_zip(
+                    [fp for fp, _ in results],
+                    "courses.zip",
+                    on_progress=on_zip,
+                    directory=temp_dir,
+                )
+                token = register_job(zip_path, "courses.zip", temp_dir, mode="zip")
+                emit({"type": "done", "token": token, "mode": "zip", "filename": "courses.zip"})
+        except Exception:
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            emit({"type": "error", "message": "Error inesperado durante la descarga. Intenta nuevamente."})
+        finally:
+            try:
+                events.put_nowait(_SENTINEL)
+            except queue.Full:
+                pass
+
+    threading.Thread(target=run, daemon=True).start()
+
+    try:
+        while True:
+            try:
+                event = events.get(timeout=30)
+            except queue.Empty:
+                yield '{"type":"keepalive"}\n'
+                continue
+            if event is _SENTINEL:
+                break
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+    finally:
+        stop.set()
+
+
+def download_progress(request):
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    canvas_url, api_token, jobs = _collect_download_jobs(request)
+    if not canvas_url or not api_token:
+        return HttpResponseBadRequest("Missing session data.")
+    if not jobs:
+        return HttpResponseBadRequest("No files selected.")
+
+    response = StreamingHttpResponse(
+        _stream_progress(canvas_url, api_token, jobs),
+        content_type="application/x-ndjson",
+    )
+    response["X-Accel-Buffering"] = "no"
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+def download_fetch(request):
+    entry = take_job(request.GET.get("token") or "")
+    if not entry:
+        return HttpResponseNotFound("La descarga no existe o expiró. Vuelve a intentarlo.")
+
+    content_type = (
+        "application/zip" if entry["mode"] == "zip" else "application/octet-stream"
+    )
+    response = StreamingHttpResponse(
+        _stream_file_with_cleanup(entry["path"], entry["temp_dir"]),
+        content_type=content_type,
+    )
+    response["Content-Disposition"] = _attachment_header(entry["filename"])
+    return response
+
+
+def download_files(request):
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    canvas_url, api_token, jobs = _collect_download_jobs(request)
+    if not canvas_url or not api_token:
+        return redirect("index")
     if not jobs:
         return redirect("course_tree")
 
@@ -192,34 +325,35 @@ def download_files(request):
     try:
         results, temp_dir = download_files_to_temp(canvas_url, api_token, jobs)
     except Exception:
+        if temp_dir is not None:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         return HttpResponseBadRequest("Error downloading files. Try again.")
 
     if not results:
         shutil.rmtree(temp_dir, ignore_errors=True)
         return HttpResponseBadRequest("Could not download any files.")
 
-    try:
-        if len(results) == 1:
-            file_path, file_name = results[0]
-            file_iter = FileWrapper(open(file_path, "rb"))
-            response = StreamingHttpResponse(
-                file_iter,
-                content_type="application/octet-stream",
+    if len(results) == 1:
+        file_path, file_name = results[0]
+        content_type = "application/octet-stream"
+        filename = file_name
+    else:
+        try:
+            zip_path = create_zip(
+                [fp for fp, _ in results], "courses.zip", directory=temp_dir
             )
-            response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-        else:
-            zip_path = create_zip([fp for fp, _ in results], "courses.zip")
-            file_iter = FileWrapper(open(zip_path, "rb"))
-            response = StreamingHttpResponse(
-                file_iter,
-                content_type="application/zip",
-            )
-            response["Content-Disposition"] = 'attachment; filename="courses.zip"'
-    except Exception:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return HttpResponseBadRequest("Error preparing download.")
+        except Exception:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return HttpResponseBadRequest("Error preparing download.")
+        file_path = zip_path
+        content_type = "application/zip"
+        filename = "courses.zip"
 
-    response._downvas_temp_dir = temp_dir
+    response = StreamingHttpResponse(
+        _stream_file_with_cleanup(file_path, temp_dir),
+        content_type=content_type,
+    )
+    response["Content-Disposition"] = _attachment_header(filename)
     return response
 
 

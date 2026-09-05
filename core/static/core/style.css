@@ -363,6 +363,86 @@ details ul li small {
     color: var(--gray-500);
 }
 
+/* ── Download progress ───────────────────────────── */
+
+.download-errors {
+    margin-bottom: 1rem;
+    padding: 0.65rem 1rem;
+    border-radius: 6px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.progress-overlay {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.progress-overlay[hidden] {
+    display: none;
+}
+
+.progress-card {
+    background: var(--purple-light);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+}
+
+.progress-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.75rem;
+}
+
+.progress-bar-track {
+    height: 12px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--purple), #a78bfa);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.progress-bar-fill.indeterminate {
+    width: 40% !important;
+    animation: indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+    0% {
+        margin-left: -40%;
+    }
+    100% {
+        margin-left: 100%;
+    }
+}
+
+.progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    min-height: 1.05rem;
+}
+
+.progress-cancel {
+    margin-top: 0.75rem;
+    width: 100%;
+}
+
 /* ── Responsive ──────────────────────────────────── */
 
 @media (max-width: 768px) {

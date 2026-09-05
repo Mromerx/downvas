@@ -1,10 +1,16 @@
+import os
 import re
+import shutil
 import tempfile
+import threading
+import time
+import uuid
 import zipfile
-from typing import List, Optional, Tuple
+from collections import defaultdict
+from typing import Callable, List, Optional, Tuple
 from pathlib import Path
 from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -73,9 +79,24 @@ class FileDownloader:
                 continue
         return None
 
-    def _stream_to_file(self, url: str, dest: Path, job: DownloadJob) -> Tuple[int, str]:
+    def _stream_to_file(
+        self, url: str, dest: Path, job: DownloadJob,
+        on_progress: Optional[Callable[[int, Optional[int]], None]] = None,
+    ) -> Tuple[int, str]:
         final_name = job.display_name
         total = 0
+        expected = job.expected_size or 0
+        last_report = [0.0]
+
+        def _report(final: bool = False) -> None:
+            if not on_progress:
+                return
+            now = time.monotonic()
+            if not final and now - last_report[0] < 0.2:
+                return
+            last_report[0] = now
+            on_progress(total, expected)
+
         with self.session.get(url, stream=True, allow_redirects=True, timeout=30) as r:
             r.raise_for_status()
 
@@ -92,12 +113,17 @@ class FileDownloader:
                     if chunk:
                         f.write(chunk)
                         total += len(chunk)
+                        _report()
+            _report(final=True)
         return total, final_name
 
-    def download_file(self, job: DownloadJob, temp_dir: Path) -> Tuple[Path, str]:
+    def download_file(
+        self, job: DownloadJob, temp_dir: Path,
+        on_progress: Optional[Callable[[int, Optional[int]], None]] = None,
+    ) -> Tuple[Path, str]:
         """Download a file to temp_dir. Returns (path, final_filename)."""
         ext = Path(job.display_name).suffix or ""
-        part_file = Path(tempfile.mktemp(suffix=ext, dir=str(temp_dir)))
+        part_file = _temp_path(temp_dir, ext)
 
         try:
             last_error: Optional[Exception] = None
@@ -105,7 +131,7 @@ class FileDownloader:
 
             for download_url in candidates:
                 try:
-                    bytes_dl, final_name = self._stream_to_file(download_url, part_file, job)
+                    _, final_name = self._stream_to_file(download_url, part_file, job, on_progress)
                     final_path = temp_dir / final_name
                     if final_path != part_file:
                         part_file.rename(final_path)
@@ -122,8 +148,8 @@ class FileDownloader:
             signed = self._signed_url(job)
             if signed and signed not in candidates:
                 try:
-                    part_file = Path(tempfile.mktemp(suffix=ext, dir=str(temp_dir)))
-                    bytes_dl, final_name = self._stream_to_file(signed, part_file, job)
+                    part_file = _temp_path(temp_dir, ext)
+                    _, final_name = self._stream_to_file(signed, part_file, job, on_progress)
                     final_path = temp_dir / final_name
                     if final_path != part_file:
                         part_file.rename(final_path)
@@ -147,34 +173,97 @@ class FileDownloader:
             raise
 
 
+def _temp_path(temp_dir: Path, ext: str) -> Path:
+    return temp_dir / f"{uuid.uuid4().hex}{ext}"
+
+
 def download_files_to_temp(
-    base_url: str, token: str, jobs: List[DownloadJob]
-) -> List[Tuple[Path, str]]:
+    base_url: str,
+    token: str,
+    jobs: List[DownloadJob],
+    emit: Optional[Callable[[dict], None]] = None,
+) -> Tuple[List[Tuple[Path, str]], Path]:
     """Download multiple files in parallel to a temp directory. Returns list of (path, name)."""
     downloader = FileDownloader(base_url, token)
     temp_dir = Path(tempfile.mkdtemp(prefix="downvas_"))
     results: List[Tuple[Path, str]] = []
 
-    def _download(job):
-        return downloader.download_file(job, temp_dir)
+    if emit:
+        emit({"type": "phase", "phase": "download", "total_files": len(jobs)})
 
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        futures = {pool.submit(_download, j): j for j in jobs}
-        for future in futures:
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception:
-                pass
+    throttle = defaultdict(float)
+    throttle_lock = threading.Lock()
+
+    def _report(index: int, name: str, got: int, expected: Optional[int]) -> None:
+        if not emit:
+            return
+        now = time.monotonic()
+        with throttle_lock:
+            last = throttle.get(index, 0.0)
+            if now - last < 0.2:
+                return
+            throttle[index] = now
+        evt = {"type": "download", "index": index, "total": len(jobs), "file": name}
+        if expected and expected > 0:
+            evt["percent"] = round(min(got / expected * 100.0, 100.0), 1)
+        emit(evt)
+
+    def _download(job: DownloadJob, index: int):
+        return downloader.download_file(
+            job, temp_dir,
+            on_progress=lambda got, expected: _report(index, job.display_name, got, expected),
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            futures = {pool.submit(_download, j, i): (j, i) for i, j in enumerate(jobs)}
+            for future in as_completed(futures):
+                _, index = futures[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                    if emit:
+                        emit({"type": "file_done", "index": index, "file": result[1]})
+                except Exception:
+                    pass
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
 
     return results, temp_dir
 
 
-def create_zip(file_paths: List[Path], zip_name: str) -> Path:
+def create_zip(
+    file_paths: List[Path],
+    zip_name: str,
+    on_progress: Optional[Callable[[int, int, str], None]] = None,
+    directory: Optional[Path] = None,
+) -> Path:
     """Create a zip file from a list of file paths. Returns the zip path."""
-    zip_path = Path(tempfile.mktemp(suffix=".zip", prefix="downvas_"))
+    fd, tmp_path = tempfile.mkstemp(
+        suffix=".zip", prefix="downvas_",
+        dir=str(directory) if directory else None,
+    )
+    os.close(fd)
+    zip_path = Path(tmp_path)
+    seen: defaultdict = defaultdict(int)
+
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for fp in file_paths:
+        for index, fp in enumerate(file_paths):
+            name = fp.name
             if fp.exists():
-                zf.write(fp, fp.name)
+                zf.write(fp, _unique_arcname(name, seen))
+            if on_progress:
+                on_progress(index, len(file_paths), name)
     return zip_path
+
+
+def _unique_arcname(name: str, seen: dict) -> str:
+    count = seen.get(name, 0)
+    seen[name] = count + 1
+    if count == 0:
+        return name
+    stem, dot, suffix = name.rpartition(".")
+    if dot:
+        return f"{stem} ({count}){dot}{suffix}"
+    return f"{name} ({count})"

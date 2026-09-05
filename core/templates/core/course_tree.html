@@ -8,6 +8,22 @@
     <form method="post" action="{% url 'download_files' %}" id="download-form">
         {% csrf_token %}
 
+        <p class="download-errors" id="download-errors" hidden></p>
+
+<div class="progress-overlay" id="progress-overlay" hidden style="margin-bottom: 1.5rem">
+            <div class="progress-card" role="status" aria-live="polite">
+                <div class="progress-title" id="progress-title">Preparing download…</div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill indeterminate" id="progress-fill"></div>
+                </div>
+                <div class="progress-meta">
+                    <span id="progress-label"></span>
+                    <span id="progress-detail"></span>
+                </div>
+                <button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel">Cancel</button>
+            </div>
+        </div>
+
         <div class="btn-group">
             <button type="button" class="btn btn-secondary" onclick="selectAll()">Select all</button>
             <button type="button" class="btn btn-secondary" onclick="deselectAll()">Deselect all</button>
@@ -46,7 +62,179 @@
     </form>
 </div>
 
+<div class="progress-overlay" id="progress-overlay" hidden>
+    <div class="progress-card" role="status" aria-live="polite">
+        <div class="progress-title" id="progress-title">Preparing download…</div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill indeterminate" id="progress-fill"></div>
+        </div>
+        <div class="progress-meta">
+            <span id="progress-label"></span>
+            <span id="progress-detail"></span>
+        </div>
+        <button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel">Cancel</button>
+    </div>
+</div>
+
 <script>
+(function () {
+    var form = document.getElementById('download-form');
+    var overlay = document.getElementById('progress-overlay');
+    var title = document.getElementById('progress-title');
+    var fill = document.getElementById('progress-fill');
+    var label = document.getElementById('progress-label');
+    var detail = document.getElementById('progress-detail');
+    var cancelBtn = document.getElementById('progress-cancel');
+    var errorsBox = document.getElementById('download-errors');
+
+    var progressUrl = "{% url 'download_progress' %}";
+    var fetchUrl = "{% url 'download_fetch' %}";
+    var active = false;
+    var cancelled = false;
+    var controller = null;
+
+    function setDeterminate(on) {
+        fill.classList.toggle('indeterminate', !on);
+    }
+
+    function setBar(percent) {
+        var v = Math.max(0, Math.min(100, percent));
+        fill.style.width = v + '%';
+        label.textContent = Math.round(v) + '%';
+        setDeterminate(true);
+    }
+
+    function setIndeterminate() {
+        setDeterminate(false);
+        fill.style.width = '';
+        label.textContent = '';
+    }
+
+    function showError(message) {
+        errorsBox.textContent = message;
+        errorsBox.hidden = false;
+    }
+
+    function finish() {
+        active = false;
+        overlay.hidden = true;
+        var submit = form.querySelector('button[type="submit"]');
+        if (submit) submit.disabled = false;
+    }
+
+    function handleEvent(evt) {
+        switch (evt.type) {
+            case 'phase':
+                if (evt.phase === 'download') {
+                    title.textContent = 'Downloading files…';
+                    setIndeterminate();
+                    detail.textContent = (evt.total_files || 0) + ' file(s) to download';
+                } else if (evt.phase === 'zip') {
+                    title.textContent = 'Creating ZIP…';
+                    setIndeterminate();
+                    detail.textContent = 'Compressing files';
+                }
+                break;
+            case 'download':
+                title.textContent = 'Downloading files…';
+                if (typeof evt.percent === 'number') {
+                    setBar(evt.percent);
+                } else {
+                    setIndeterminate();
+                }
+                detail.textContent = 'File ' + (evt.index + 1) + ' of ' + evt.total + ' — ' + evt.file;
+                break;
+            case 'zip':
+                title.textContent = 'Creating ZIP…';
+                if (evt.total > 0) setBar(evt.index / evt.total * 100);
+                detail.textContent = 'File ' + (evt.index + 1) + ' of ' + evt.total + ' — ' + evt.file;
+                break;
+            case 'done':
+                title.textContent = 'Download ready, saving file…';
+                setBar(100);
+                detail.textContent = evt.filename || '';
+                active = false;
+                window.location.href = fetchUrl + '?token=' + encodeURIComponent(evt.token);
+                break;
+            case 'error':
+                finish();
+                showError(evt.message || 'An error occurred during the download.');
+                break;
+        }
+    }
+
+    async function startDownload() {
+        controller = new AbortController();
+        var body = new FormData(form);
+        try {
+            var resp = await fetch(progressUrl, {
+                method: 'POST',
+                body: body,
+                credentials: 'same-origin',
+                signal: controller.signal
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            if (!resp.body) throw new Error('Empty response body');
+
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder('utf-8');
+            var buffer = '';
+
+            while (true) {
+                var result = await reader.read();
+                if (result.done) break;
+                buffer += decoder.decode(result.value, { stream: true });
+                var lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (!line) continue;
+                    try {
+                        handleEvent(JSON.parse(line));
+                    } catch (e) { /* skip malformed line */ }
+                }
+            }
+            if (active) {
+                finish();
+                showError('Download was interrupted before it could complete.');
+            }
+        } catch (err) {
+            if (active && !cancelled) {
+                finish();
+                showError('Could not start the download. Try again.');
+            }
+        }
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (active) return;
+        var selected = form.querySelectorAll('input[name="file_ids"]:checked');
+        if (selected.length === 0) {
+            showError('Select at least one file to download.');
+            return;
+        }
+        active = true;
+        cancelled = false;
+        errorsBox.hidden = true;
+        var submit = form.querySelector('button[type="submit"]');
+        if (submit) submit.disabled = true;
+        title.textContent = 'Preparing download…';
+        setIndeterminate();
+        detail.textContent = 'Starting…';
+        overlay.hidden = false;
+        startDownload();
+    });
+
+    cancelBtn.addEventListener('click', function () {
+        if (active) {
+            cancelled = true;
+            if (controller) controller.abort();
+            finish();
+        }
+    });
+})();
+
 function toggleSection(checkbox) {
     var sectionClass = checkbox.getAttribute('data-section');
     var files = document.querySelectorAll('.' + sectionClass);
