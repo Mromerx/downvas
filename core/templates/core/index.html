@@ -1,8 +1,9 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
 {% block content %}
 <h1 class="page-title">DownVas</h1>
-<p class="subtitle page-subtitle">Download courses from Canvas LMS</p>
+<p class="subtitle page-subtitle">{% trans 'Download courses from Canvas LMS' %}</p>
 
 {% if messages %}
 <ul class="messages">
@@ -19,14 +20,14 @@
             <label for="id_course_input">{{ course_form.course_input.label }}</label>
             {{ course_form.course_input }}
         </div>
-        <button type="submit" class="btn btn-primary">Load Course</button>
+        <button type="submit" class="btn btn-primary">{% trans 'Load Course' %}</button>
     </form>
 </div>
 
 <div class="course-loading" id="course-loading" hidden>
     <div class="course-loading-card">
         <div class="spinner" role="status"></div>
-        <div class="course-loading-text">Loading course…</div>
+        <div class="course-loading-text">{% trans 'Loading course…' %}</div>
     </div>
 </div>
 

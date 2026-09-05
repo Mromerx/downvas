@@ -77,13 +77,17 @@ python manage.py runserver
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
+> **Note:** To access the app, open `http://localhost:8000`.
+
 ## Usage
 
-1. Go to **Settings** and enter your Canvas URL and API token
+1. Go to **Settings**, choose your **Language** (English / Spanish) and enter your Canvas URL and API token
 2. Navigate to the home page and enter a course ID or full Canvas course URL
 3. The course tree will load with all files organized by modules, pages, and folders
 4. Select files using checkboxes (individual or by section)
 5. Click **Download selected** to download directly to your browser
+
+The interface language can be switched at any time from **Settings > Language**. Changes apply immediately and persist per browser session.
 
 ## How to get a Canvas API token
 
@@ -107,7 +111,15 @@ downvas/
     html_parser.py           # Extracts file links from HTML content
     exceptions.py            # Custom exception hierarchy
     models.py                # Dataclasses: CanvasCourse, CanvasFolder, CanvasFile, CourseTree
+  locale/                    # Translation catalogs (en / es)
   sessions/                  # File-based session storage (gitignored)
+```
+
+To update translations after editing strings:
+
+```bash
+python manage.py makemessages -l es --ignore=.venv
+python manage.py compilemessages --ignore=.venv
 ```
 
 ## Tech Stack

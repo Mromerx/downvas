@@ -9,6 +9,8 @@ from django.http import (
     StreamingHttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 )
 from django.shortcuts import render, redirect
+from django.utils import translation
+from django.utils.translation import gettext as _
 
 from canvas_client.api_client import CanvasAPIClient
 from canvas_client.exceptions import (
@@ -33,7 +35,7 @@ def _config_form_from_session(request, initial=None):
         data.update(initial)
     form = CanvasConfigForm(initial=data)
     if get_api_token():
-        form.fields["api_token"].widget.attrs["placeholder"] = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)"
+        form.fields["api_token"].widget.attrs["placeholder"] = _("\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (saved)")
     return form
 
 
@@ -49,7 +51,7 @@ def settings_view(request):
     if request.method == "POST":
         config_form = CanvasConfigForm(request.POST)
         if not config_form.is_valid():
-            messages.error(request, "Please fill in all settings fields.")
+            messages.error(request, _("Please fill in all settings fields."))
             return redirect("settings")
 
         request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
@@ -58,7 +60,7 @@ def settings_view(request):
             set_api_token(api_token)
         request.session["locale"] = config_form.cleaned_data["locale"]
 
-        messages.success(request, "Settings saved.")
+        messages.success(request, _("Settings saved."))
         return redirect("settings")
 
     config_form = _config_form_from_session(request)
@@ -78,7 +80,7 @@ def save_config(request):
 
     config_form = CanvasConfigForm(request.POST)
     if not config_form.is_valid():
-        messages.error(request, "Please fill in all settings fields.")
+        messages.error(request, _("Please fill in all settings fields."))
         return redirect("index")
 
     request.session["canvas_url"] = config_form.cleaned_data["canvas_url"].strip().rstrip("/")
@@ -87,7 +89,7 @@ def save_config(request):
         set_api_token(api_token)
     request.session["locale"] = config_form.cleaned_data["locale"]
 
-    messages.success(request, "Settings saved.")
+    messages.success(request, _("Settings saved."))
     return redirect("index")
 
 
@@ -98,39 +100,36 @@ def load_course(request):
     course_form = CourseInputForm(request.POST)
 
     if not course_form.is_valid():
-        messages.error(request, "Enter a course ID.")
+        messages.error(request, _("Enter a course ID."))
         return redirect("index")
 
     canvas_url = request.session.get("canvas_url")
     api_token = get_api_token()
-    locale = request.session.get("locale", "en")
     course_input = course_form.cleaned_data["course_input"].strip()
 
     if not canvas_url or not api_token:
-        messages.error(request, "Save your Canvas settings first.")
+        messages.error(request, _("Save your Canvas settings first."))
         return redirect("index")
 
     course_id = extract_course_id(course_input)
     if not course_id:
-        messages.error(request, "Could not identify the course ID. Enter a numeric ID or a valid URL.")
+        messages.error(request, _("Could not identify the course ID. Enter a numeric ID or a valid URL."))
         return redirect("index")
-
-    request.session["locale"] = locale
 
     try:
         client = CanvasAPIClient(canvas_url, api_token)
         tree = client.fetch_course_tree(course_id)
     except CanvasAuthError:
-        messages.error(request, "Invalid or expired access token.")
+        messages.error(request, _("Invalid or expired access token."))
         return redirect("index")
     except CourseNotFoundError:
-        messages.error(request, "Course not found. Check the ID or URL.")
+        messages.error(request, _("Course not found. Check the ID or URL."))
         return redirect("index")
     except CanvasConnectionError:
-        messages.error(request, "Could not connect to Canvas. Check the URL.")
+        messages.error(request, _("Could not connect to Canvas. Check the URL."))
         return redirect("index")
     except CanvasAPIError:
-        messages.error(request, "Error communicating with Canvas. Try again.")
+        messages.error(request, _("Error communicating with Canvas. Try again."))
         return redirect("index")
 
     tree_data = _serialize_tree(tree)
@@ -212,7 +211,7 @@ def _stream_file_with_cleanup(path, temp_dir):
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def _stream_progress(canvas_url, api_token, jobs):
+def _stream_progress(canvas_url, api_token, jobs, locale):
     events = queue.Queue(maxsize=256)
     stop = threading.Event()
 
@@ -225,12 +224,13 @@ def _stream_progress(canvas_url, api_token, jobs):
             pass
 
     def run():
+        translation.activate(locale)
         temp_dir = None
         try:
             results, temp_dir = download_files_to_temp(canvas_url, api_token, jobs, emit=emit)
 
             if not results:
-                emit({"type": "error", "message": "No se pudo descargar ningún archivo. Revisa tu token y vuelve a intentar."})
+                emit({"type": "error", "message": _("No se pudo descargar ningún archivo. Revisa tu token y vuelve a intentar.")})
                 return
 
             if len(results) == 1:
@@ -254,7 +254,7 @@ def _stream_progress(canvas_url, api_token, jobs):
         except Exception:
             if temp_dir is not None:
                 shutil.rmtree(temp_dir, ignore_errors=True)
-            emit({"type": "error", "message": "Error inesperado durante la descarga. Intenta nuevamente."})
+            emit({"type": "error", "message": _("Error inesperado durante la descarga. Intenta nuevamente.")})
         finally:
             try:
                 events.put_nowait(_SENTINEL)
@@ -288,7 +288,7 @@ def download_progress(request):
         return HttpResponseBadRequest("No files selected.")
 
     response = StreamingHttpResponse(
-        _stream_progress(canvas_url, api_token, jobs),
+        _stream_progress(canvas_url, api_token, jobs, translation.get_language()),
         content_type="application/x-ndjson",
     )
     response["X-Accel-Buffering"] = "no"
@@ -299,7 +299,7 @@ def download_progress(request):
 def download_fetch(request):
     entry = take_job(request.GET.get("token") or "")
     if not entry:
-        return HttpResponseNotFound("La descarga no existe o expiró. Vuelve a intentarlo.")
+        return HttpResponseNotFound(_("La descarga no existe o expiró. Vuelve a intentarlo."))
 
     content_type = (
         "application/zip" if entry["mode"] == "zip" else "application/octet-stream"
@@ -328,11 +328,11 @@ def download_files(request):
     except Exception:
         if temp_dir is not None:
             shutil.rmtree(temp_dir, ignore_errors=True)
-        return HttpResponseBadRequest("Error downloading files. Try again.")
+        return HttpResponseBadRequest(_("Error downloading files. Try again."))
 
     if not results:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        return HttpResponseBadRequest("Could not download any files.")
+        return HttpResponseBadRequest(_("Could not download any files."))
 
     if len(results) == 1:
         file_path, file_name = results[0]
@@ -345,7 +345,7 @@ def download_files(request):
             )
         except Exception:
             shutil.rmtree(temp_dir, ignore_errors=True)
-            return HttpResponseBadRequest("Error preparing download.")
+            return HttpResponseBadRequest(_("Error preparing download."))
         file_path = zip_path
         content_type = "application/zip"
         filename = "courses.zip"
@@ -411,7 +411,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
         for mname, fs in mdict.items():
             fs.sort(key=lambda x: x.display_name.lower())
             sections.append({
-                "name": mname or "No module",
+                "name": mname or _("No module"),
                 "type": "module",
                 "files": [_file_dict(f) for f in fs],
             })
@@ -425,7 +425,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
         for pname, fs in pdict.items():
             fs.sort(key=lambda x: x.display_name.lower())
             sections.append({
-                "name": pname or "No page",
+                "name": pname or _("No page"),
                 "type": "page",
                 "files": [_file_dict(f) for f in fs],
             })
@@ -450,7 +450,7 @@ def _build_sections(tree: CourseTree) -> list[dict]:
     if flat:
         flat.sort(key=lambda x: x.display_name.lower())
         sections.append({
-            "name": "Other files",
+            "name": _("Other files"),
             "type": "other",
             "files": [_file_dict(f) for f in flat],
         })

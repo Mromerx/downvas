@@ -1,8 +1,11 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
 {% block content %}
 <h1>{{ course.name }}</h1>
-<p class="subtitle">{{ total_files }} files found</p>
+<p class="subtitle">
+    {% blocktranslate count count=total_files %}{{ count }} file found{% plural %}{{ count }} files found{% endblocktranslate %}
+</p>
 
 <div class="card">
     <form method="post" action="{% url 'download_files' %}" id="download-form">
@@ -12,7 +15,7 @@
 
 <div class="progress-overlay" id="progress-overlay" hidden style="margin-bottom: 1.5rem">
             <div class="progress-card" role="status" aria-live="polite">
-                <div class="progress-title" id="progress-title">Preparing download…</div>
+                <div class="progress-title" id="progress-title">{% trans 'Preparing download…' %}</div>
                 <div class="progress-bar-track">
                     <div class="progress-bar-fill indeterminate" id="progress-fill"></div>
                 </div>
@@ -20,14 +23,14 @@
                     <span id="progress-label"></span>
                     <span id="progress-detail"></span>
                 </div>
-<button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel" style="margin-top: 0.3rem">Cancel</button>
+<button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel" style="margin-top: 0.3rem">{% trans 'Cancel' %}</button>
             </div>
         </div>
 
         <div class="btn-group">
-            <button type="button" class="btn btn-secondary" onclick="selectAll()">Select all</button>
-            <button type="button" class="btn btn-secondary" onclick="deselectAll()">Deselect all</button>
-            <button type="submit" class="btn btn-primary">Download selected</button>
+            <button type="button" class="btn btn-secondary" onclick="selectAll()">{% trans 'Select all' %}</button>
+            <button type="button" class="btn btn-secondary" onclick="deselectAll()">{% trans 'Deselect all' %}</button>
+            <button type="submit" class="btn btn-primary">{% trans 'Download selected' %}</button>
         </div>
 
         {% for section in sections %}
@@ -38,7 +41,7 @@
                        data-section="section-{{ forloop.counter }}"
                        onchange="toggleSection(this)">
                 <strong>{{ section.name }}</strong>
-                <small>({{ section.files|length }} files - {{ section.type }})</small>
+                <small>{% blocktranslate with count=section.files|length type=section.type %}({{ count }} files - {{ type }}){% endblocktranslate %}</small>
             </summary>
 
             <ul>
@@ -50,21 +53,21 @@
                            class="section-{{ forloop.parentloop.counter }}">
                     {{ file.display_name }}
                     {% if file.size %}<small>({{ file.size }})</small>{% endif %}
-                    {% if file.locked %}<small>[Locked]</small>{% endif %}
-                    {% if file.hidden %}<small>[Hidden]</small>{% endif %}
+                    {% if file.locked %}<small>[{% trans 'Locked' %}]</small>{% endif %}
+                    {% if file.hidden %}<small>[{% trans 'Hidden' %}]</small>{% endif %}
                 </li>
                 {% endfor %}
             </ul>
         </details>
         {% empty %}
-        <p>No files found in this course.</p>
+        <p>{% trans 'No files found in this course.' %}</p>
         {% endfor %}
     </form>
 </div>
 
 <div class="progress-overlay" id="progress-overlay" hidden>
     <div class="progress-card" role="status" aria-live="polite">
-        <div class="progress-title" id="progress-title">Preparing download…</div>
+        <div class="progress-title" id="progress-title">{% trans 'Preparing download…' %}</div>
         <div class="progress-bar-track">
             <div class="progress-bar-fill indeterminate" id="progress-fill"></div>
         </div>
@@ -72,12 +75,30 @@
             <span id="progress-label"></span>
             <span id="progress-detail"></span>
         </div>
-        <button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel">Cancel</button>
+        <button type="button" class="btn btn-secondary progress-cancel" id="progress-cancel">{% trans 'Cancel' %}</button>
     </div>
 </div>
 
 <script>
+window.DOWNVAS_I18N = {
+    preparing: "{% trans 'Preparing download…' %}",
+    downloading: "{% trans 'Downloading files…' %}",
+    creatingZip: "{% trans 'Creating ZIP…' %}",
+    filesToDownload: "{% trans 'file(s) to download' %}",
+    compressing: "{% trans 'Compressing files' %}",
+    fileOf: "{% trans 'File' %}",
+    of: "{% trans 'of' %}",
+    starting: "{% trans 'Starting…' %}",
+    selectAtLeastOne: "{% trans 'Select at least one file to download.' %}",
+    errorOccurred: "{% trans 'An error occurred during the download.' %}",
+    interrupted: "{% trans 'Download was interrupted before it could complete.' %}",
+    couldNotStart: "{% trans 'Could not start the download. Try again.' %}"
+};
+</script>
+
+<script>
 (function () {
+    var i18n = window.DOWNVAS_I18N || {};
     var form = document.getElementById('download-form');
     var overlay = document.getElementById('progress-overlay');
     var title = document.getElementById('progress-title');
@@ -122,32 +143,36 @@
         if (submit) submit.disabled = false;
     }
 
+    function fileDetail(index, total, file) {
+        return i18n.fileOf + ' ' + (index + 1) + ' ' + i18n.of + ' ' + total + ' — ' + file;
+    }
+
     function handleEvent(evt) {
         switch (evt.type) {
             case 'phase':
                 if (evt.phase === 'download') {
-                    title.textContent = 'Downloading files…';
+                    title.textContent = i18n.downloading;
                     setIndeterminate();
-                    detail.textContent = (evt.total_files || 0) + ' file(s) to download';
+                    detail.textContent = (evt.total_files || 0) + ' ' + i18n.filesToDownload;
                 } else if (evt.phase === 'zip') {
-                    title.textContent = 'Creating ZIP…';
+                    title.textContent = i18n.creatingZip;
                     setIndeterminate();
-                    detail.textContent = 'Compressing files';
+                    detail.textContent = i18n.compressing;
                 }
                 break;
             case 'download':
-                title.textContent = 'Downloading files…';
+                title.textContent = i18n.downloading;
                 if (typeof evt.percent === 'number') {
                     setBar(evt.percent);
                 } else {
                     setIndeterminate();
                 }
-                detail.textContent = 'File ' + (evt.index + 1) + ' of ' + evt.total + ' — ' + evt.file;
+                detail.textContent = fileDetail(evt.index, evt.total, evt.file);
                 break;
             case 'zip':
-                title.textContent = 'Creating ZIP…';
+                title.textContent = i18n.creatingZip;
                 if (evt.total > 0) setBar(evt.index / evt.total * 100);
-                detail.textContent = 'File ' + (evt.index + 1) + ' of ' + evt.total + ' — ' + evt.file;
+                detail.textContent = fileDetail(evt.index, evt.total, evt.file);
                 break;
             case 'done':
                 cancelBtn.style.display = 'none';
@@ -156,7 +181,7 @@
                 break;
             case 'error':
                 finish();
-                showError(evt.message || 'An error occurred during the download.');
+                showError(evt.message || i18n.errorOccurred);
                 break;
         }
     }
@@ -194,12 +219,12 @@
             }
             if (active) {
                 finish();
-                showError('Download was interrupted before it could complete.');
+                showError(i18n.interrupted);
             }
         } catch (err) {
             if (active && !cancelled) {
                 finish();
-                showError('Could not start the download. Try again.');
+                showError(i18n.couldNotStart);
             }
         }
     }
@@ -209,7 +234,7 @@
         if (active) return;
         var selected = form.querySelectorAll('input[name="file_ids"]:checked');
         if (selected.length === 0) {
-            showError('Select at least one file to download.');
+            showError(i18n.selectAtLeastOne);
             return;
         }
         active = true;
@@ -217,9 +242,9 @@
         errorsBox.hidden = true;
         var submit = form.querySelector('button[type="submit"]');
         if (submit) submit.disabled = true;
-        title.textContent = 'Preparing download…';
+        title.textContent = i18n.preparing;
         setIndeterminate();
-        detail.textContent = 'Starting…';
+        detail.textContent = i18n.starting;
         cancelBtn.style.display = '';
         overlay.hidden = false;
         startDownload();

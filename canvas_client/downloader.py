@@ -14,6 +14,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
+from django.utils.translation import gettext as _
+
 from .exceptions import CanvasAPIError
 
 
@@ -102,7 +104,7 @@ class FileDownloader:
 
             content_type = r.headers.get("Content-Type", "")
             if "application/json" in content_type and not job.display_name.lower().endswith(".json"):
-                raise CanvasAPIError("La descarga devolvio JSON inesperado en lugar de binario.")
+                raise CanvasAPIError(_("La descarga devolvio JSON inesperado en lugar de binario."))
 
             cd_name = self._name_from_content_disposition(r.headers.get("Content-Disposition", ""))
             if cd_name and Path(cd_name).suffix:
@@ -162,7 +164,7 @@ class FileDownloader:
                         except OSError:
                             pass
 
-            raise last_error if last_error else CanvasAPIError("Todas las URLs de descarga fallaron.")
+            raise last_error if last_error else CanvasAPIError(_("Todas las URLs de descarga fallaron."))
 
         except Exception:
             if part_file.exists():

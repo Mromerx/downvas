@@ -1,5 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
+from django.utils.translation import gettext_lazy as _
 import os
 
 load_dotenv()
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.LocaleFromSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -42,6 +44,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -56,6 +59,12 @@ SESSION_COOKIE_AGE = 7862400
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 DATABASES = {}
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('es', _('Español')),
+]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 LANGUAGE_CODE = 'en'
 TIME_ZONE = 'America/Santiago'

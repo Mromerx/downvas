@@ -2,6 +2,8 @@ import time
 import requests
 from typing import Any, Optional
 
+from django.utils.translation import gettext as _
+
 from .models import (
     CanvasCourse, CanvasFolder, CanvasFile, CourseTree
 )
@@ -36,9 +38,9 @@ class CanvasAPIClient:
             if response.status_code == 200:
                 return response
             elif response.status_code == 401:
-                raise CanvasAuthError("Token de acceso invalido o expirado.", status_code=401)
+                raise CanvasAuthError(_("Token de acceso invalido o expirado."), status_code=401)
             elif response.status_code == 404:
-                raise CourseNotFoundError("El curso no fue encontrado.", status_code=404)
+                raise CourseNotFoundError(_("El curso no fue encontrado."), status_code=404)
             elif response.status_code in (403, 429):
                 err_msg = response.text.lower()
                 if "rate limit" in err_msg or response.status_code == 429:
@@ -46,17 +48,25 @@ class CanvasAPIClient:
                     response = self.session.request(method, url, **kwargs)
                     if response.status_code == 200:
                         return response
-                    raise RateLimitError("Limite de solicitudes alcanzado.", status_code=response.status_code)
-                raise CanvasAPIError(f"Acceso denegado ({response.status_code}): {response.text}", status_code=response.status_code)
+                    raise RateLimitError(_("Limite de solicitudes alcanzado."), status_code=response.status_code)
+                raise CanvasAPIError(
+                    _("Acceso denegado ({status_code}): {body}").format(
+                        status_code=response.status_code, body=response.text
+                    ),
+                    status_code=response.status_code,
+                )
             else:
-                raise CanvasAPIError(f"Error HTTP {response.status_code}", status_code=response.status_code)
+                raise CanvasAPIError(
+                    _("Error HTTP {status_code}").format(status_code=response.status_code),
+                    status_code=response.status_code,
+                )
 
         except requests.exceptions.ConnectionError as e:
-            raise CanvasConnectionError(f"No se pudo establecer conexion: {e}")
+            raise CanvasConnectionError(_("No se pudo establecer conexion: {error}").format(error=e))
         except requests.RequestException as e:
             if isinstance(e, CanvasAPIError):
                 raise
-            raise CanvasAPIError(f"Error de red inesperado: {e}")
+            raise CanvasAPIError(_("Error de red inesperado: {error}").format(error=e))
 
     def verify_authentication(self) -> None:
         self._request("GET", f"{self.base_url}/api/v1/users/self")

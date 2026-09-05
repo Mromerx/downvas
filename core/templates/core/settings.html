@@ -1,8 +1,9 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
 {% block content %}
-<h1>Settings</h1>
-<p class="subtitle">Configure your Canvas LMS connection</p>
+<h1>{% trans 'Settings' %}</h1>
+<p class="subtitle">{% trans 'Configure your Canvas LMS connection' %}</p>
 
 {% if messages %}
 <ul class="messages">
@@ -27,12 +28,12 @@
             <label for="id_locale">{{ config_form.locale.label }}</label>
             {{ config_form.locale }}
         </div>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary">{% trans 'Save' %}</button>
     </form>
 </div>
 
 {% if request.session.canvas_url %}
 <hr>
-<a class="link" href="{% url 'clear_session' %}">Clear session (remove saved data)</a>
+<a class="link" href="{% url 'clear_session' %}">{% trans 'Clear session (remove saved data)' %}</a>
 {% endif %}
 {% endblock %}

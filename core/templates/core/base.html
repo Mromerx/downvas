@@ -1,6 +1,7 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,11 +12,11 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <span class="sidebar-brand">DownVas</span>
-            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="{% trans 'Toggle sidebar' %}">&#9776;</button>
         </div>
         <ul class="sidebar-nav">
-            <li><a href="{% url 'index' %}"><span>Home</span></a></li>
-            <li><a href="{% url 'settings' %}"><span>Settings</span></a></li>
+            <li><a href="{% url 'index' %}"><span>{% trans 'Home' %}</span></a></li>
+            <li><a href="{% url 'settings' %}"><span>{% trans 'Settings' %}</span></a></li>
         </ul>
     </aside>
     <main class="main-content" id="main-content">

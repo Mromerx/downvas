@@ -1,27 +1,28 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 
 class CanvasConfigForm(forms.Form):
     canvas_url = forms.URLField(
-        label="Canvas URL",
+        label=_("Canvas URL"),
         widget=forms.URLInput(attrs={"placeholder": "https://canvas.example.com"}),
     )
     api_token = forms.CharField(
-        label="API Token",
+        label=_("API Token"),
         required=False,
-        widget=forms.PasswordInput(attrs={"placeholder": "Your Canvas API token"}),
+        widget=forms.PasswordInput(attrs={"placeholder": _("Your Canvas API token")}),
     )
     locale = forms.ChoiceField(
-        label="Language",
-        choices=[("en", "English"), ("es", "Spanish")],
+        label=_("Language"),
+        choices=[("en", _("English")), ("es", _("Spanish"))],
         initial="en",
     )
 
 
 class CourseInputForm(forms.Form):
     course_input = forms.CharField(
-        label="Course",
+        label=_("Course"),
         widget=forms.TextInput(attrs={
-            "placeholder": "Course ID or full URL"
+            "placeholder": _("Course ID or full URL")
         }),
     )

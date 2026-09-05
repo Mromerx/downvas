@@ -1,0 +1,301 @@
+# Translations for the DownVas package.
+# Copyright (C) 2026 DownVas
+# This file is distributed under the same license as the DownVas package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: DownVas\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-05 19:21-0400\n"
+"PO-Revision-Date: 2026-09-05 19:21-0400\n"
+"Last-Translator: DownVas\n"
+"Language-Team: Spanish <es@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
+"1 : 2;\n"
+
+#: canvas_client/api_client.py:41
+msgid "Token de acceso invalido o expirado."
+msgstr "Token de acceso inválido o expirado."
+
+#: canvas_client/api_client.py:43
+msgid "El curso no fue encontrado."
+msgstr "El curso no fue encontrado."
+
+#: canvas_client/api_client.py:51
+msgid "Limite de solicitudes alcanzado."
+msgstr "Límite de solicitudes alcanzado."
+
+#: canvas_client/api_client.py:53
+#: core/views.py:123
+msgid "Acceso denegado ({status_code}): {body}"
+msgstr "Acceso denegado ({status_code}): {body}"
+
+#: canvas_client/api_client.py:60
+#: core/views.py:132
+#, python-brace-format
+msgid "Error HTTP {status_code}"
+msgstr "Error HTTP {status_code}"
+
+#: canvas_client/api_client.py:65
+#, python-brace-format
+msgid "No se pudo establecer conexion: {error}"
+msgstr "No se pudo establecer conexión: {error}"
+
+#: canvas_client/api_client.py:69
+#, python-brace-format
+msgid "Error de red inesperado: {error}"
+msgstr "Error de red inesperado: {error}"
+
+#: canvas_client/downloader.py:107
+msgid "La descarga devolvio JSON inesperado en lugar de binario."
+msgstr "La descarga devolvió JSON inesperado en lugar de binario."
+
+#: canvas_client/downloader.py:167
+msgid "Todas las URLs de descarga fallaron."
+msgstr "Todas las URLs de descarga fallaron."
+
+#: core/forms.py:7
+msgid "Canvas URL"
+msgstr "URL de Canvas"
+
+#: core/forms.py:11
+msgid "API Token"
+msgstr "Token de API"
+
+#: core/forms.py:13
+msgid "Your Canvas API token"
+msgstr "Tu token de API de Canvas"
+
+#: core/forms.py:16
+msgid "Language"
+msgstr "Idioma"
+
+#: core/forms.py:17 downvas/settings.py:64
+msgid "English"
+msgstr "Inglés"
+
+#: core/forms.py:17
+msgid "Spanish"
+msgstr "Español"
+
+#: core/forms.py:24
+msgid "Course"
+msgstr "Curso"
+
+#: core/forms.py:26
+msgid "Course ID or full URL"
+msgstr "ID del curso o URL completa"
+
+#: core/templates/core/base.html:15
+msgid "Toggle sidebar"
+msgstr "Mostrar/ocultar barra lateral"
+
+#: core/templates/core/base.html:18
+msgid "Home"
+msgstr "Inicio"
+
+#: core/templates/core/base.html:19 core/templates/core/settings.html:5
+msgid "Settings"
+msgstr "Ajustes"
+
+#: core/templates/core/course_tree.html:7
+#, python-format
+msgid "%(count)s file found"
+msgid_plural "%(count)s files found"
+msgstr[0] "%(count)s archivo encontrado"
+msgstr[1] "%(count)s archivos encontrados"
+msgstr[2] "%(count)s archivos encontrados"
+
+#: core/templates/core/course_tree.html:18
+#: core/templates/core/course_tree.html:70
+#: core/templates/core/course_tree.html:84
+msgid "Preparing download…"
+msgstr "Preparando descarga…"
+
+#: core/templates/core/course_tree.html:26
+#: core/templates/core/course_tree.html:78
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: core/templates/core/course_tree.html:31
+msgid "Select all"
+msgstr "Seleccionar todo"
+
+#: core/templates/core/course_tree.html:32
+msgid "Deselect all"
+msgstr "Deseleccionar todo"
+
+#: core/templates/core/course_tree.html:33
+msgid "Download selected"
+msgstr "Descargar seleccionados"
+
+#: core/templates/core/course_tree.html:44
+#, python-format
+msgid "(%(count)s files - %(type)s)"
+msgstr "(%(count)s archivos - %(type)s)"
+
+#: core/templates/core/course_tree.html:56
+msgid "Locked"
+msgstr "Bloqueado"
+
+#: core/templates/core/course_tree.html:57
+msgid "Hidden"
+msgstr "Oculto"
+
+#: core/templates/core/course_tree.html:63
+msgid "No files found in this course."
+msgstr "No se encontraron archivos en este curso."
+
+#: core/templates/core/course_tree.html:85
+msgid "Downloading files…"
+msgstr "Descargando archivos…"
+
+#: core/templates/core/course_tree.html:86
+msgid "Creating ZIP…"
+msgstr "Creando ZIP…"
+
+#: core/templates/core/course_tree.html:87
+msgid "file(s) to download"
+msgstr "archivo(s) para descargar"
+
+#: core/templates/core/course_tree.html:88
+msgid "Compressing files"
+msgstr "Comprimiendo archivos"
+
+#: core/templates/core/course_tree.html:89
+msgid "File"
+msgstr "Archivo"
+
+#: core/templates/core/course_tree.html:90
+msgid "of"
+msgstr "de"
+
+#: core/templates/core/course_tree.html:91
+msgid "Starting…"
+msgstr "Iniciando…"
+
+#: core/templates/core/course_tree.html:92
+msgid "Select at least one file to download."
+msgstr "Selecciona al menos un archivo para descargar."
+
+#: core/templates/core/course_tree.html:93
+msgid "An error occurred during the download."
+msgstr "Ocurrió un error durante la descarga."
+
+#: core/templates/core/course_tree.html:94
+msgid "Download was interrupted before it could complete."
+msgstr "La descarga se interrumpió antes de completarse."
+
+#: core/templates/core/course_tree.html:95
+msgid "Could not start the download. Try again."
+msgstr "No se pudo iniciar la descarga. Inténtalo de nuevo."
+
+#: core/templates/core/index.html:6
+msgid "Download courses from Canvas LMS"
+msgstr "Descarga cursos de Canvas LMS"
+
+#: core/templates/core/index.html:23
+msgid "Load Course"
+msgstr "Cargar curso"
+
+#: core/templates/core/index.html:30
+msgid "Loading course…"
+msgstr "Cargando curso…"
+
+#: core/templates/core/settings.html:6
+msgid "Configure your Canvas LMS connection"
+msgstr "Configura tu conexión a Canvas LMS"
+
+#: core/templates/core/settings.html:31
+msgid "Save"
+msgstr "Guardar"
+
+#: core/templates/core/settings.html:37
+msgid "Clear session (remove saved data)"
+msgstr "Limpiar sesión (eliminar datos guardados)"
+
+#: core/views.py:38
+msgid "•••••••• (saved)"
+msgstr "•••••••• (guardado)"
+
+#: core/views.py:54 core/views.py:83
+msgid "Please fill in all settings fields."
+msgstr "Por favor completa todos los campos de ajustes."
+
+#: core/views.py:63 core/views.py:92
+msgid "Settings saved."
+msgstr "Ajustes guardados."
+
+#: core/views.py:103
+msgid "Enter a course ID."
+msgstr "Ingresa un ID de curso."
+
+#: core/views.py:111
+msgid "Save your Canvas settings first."
+msgstr "Primero guarda tus ajustes de Canvas."
+
+#: core/views.py:116
+msgid "Could not identify the course ID. Enter a numeric ID or a valid URL."
+msgstr "No se pudo identificar el ID del curso. Ingresa un ID numérico o una URL válida."
+
+#: core/views.py:123
+msgid "Invalid or expired access token."
+msgstr "Token de acceso inválido o expirado."
+
+#: core/views.py:126
+msgid "Course not found. Check the ID or URL."
+msgstr "Curso no encontrado. Revisa el ID o la URL."
+
+#: core/views.py:129
+msgid "Could not connect to Canvas. Check the URL."
+msgstr "No se pudo conectar a Canvas. Revisa la URL."
+
+#: core/views.py:132
+msgid "Error communicating with Canvas. Try again."
+msgstr "Error al comunicarse con Canvas. Inténtalo de nuevo."
+
+#: core/views.py:233
+msgid ""
+"No se pudo descargar ningún archivo. Revisa tu token y vuelve a intentar."
+msgstr ""
+"No se pudo descargar ningún archivo. Revisa tu token y vuelve a intentar."
+
+#: core/views.py:257
+msgid "Error inesperado durante la descarga. Intenta nuevamente."
+msgstr "Error inesperado durante la descarga. Intenta nuevamente."
+
+#: core/views.py:302
+msgid "La descarga no existe o expiró. Vuelve a intentarlo."
+msgstr "La descarga no existe o expiró. Vuelve a intentarlo."
+
+#: core/views.py:331
+msgid "Error downloading files. Try again."
+msgstr "Error al descargar archivos. Inténtalo de nuevo."
+
+#: core/views.py:335
+msgid "Could not download any files."
+msgstr "No se pudo descargar ningún archivo."
+
+#: core/views.py:348
+msgid "Error preparing download."
+msgstr "Error al preparar la descarga."
+
+#: core/views.py:414
+msgid "No module"
+msgstr "Sin módulo"
+
+#: core/views.py:428
+msgid "No page"
+msgstr "Sin página"
+
+#: core/views.py:453
+msgid "Other files"
+msgstr "Otros archivos"
+
+#: downvas/settings.py:65
+msgid "Español"
+msgstr "Español"
